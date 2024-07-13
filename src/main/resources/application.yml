@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: create
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3s
+          max-attempts: 6
+          max-interval: 10s
+          multiplier: 2
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+messaging:
+  transfer:
+    exchange-name: money.transfer.start
+    queue-name: money.transfer.start
+    routing-key: money.transfer.routing-key.start
+  dlq:
+    exchange-name: money.transfer.dlq
+    queue-name: money.transfer.dlq
+
+RABBITMQ_HOST: "localhost"
+RABBITMQ_PORT: 5672
+RABBITMQ_USERNAME: "guest"
+RABBITMQ_PASSWORD: "guest"
