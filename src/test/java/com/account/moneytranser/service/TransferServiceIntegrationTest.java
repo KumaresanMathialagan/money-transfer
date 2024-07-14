@@ -8,19 +8,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 public class TransferServiceIntegrationTest {
-
 
     @Autowired
     private TransferService transferService;
@@ -38,14 +36,16 @@ public class TransferServiceIntegrationTest {
     @Autowired
     private ExchangeRateService exchangeRateService;
 
+    @Autowired
+    private Executor taskExecutor;
+
     @BeforeEach
     void setup(){
-        transferService = new TransferService(accountRepository,transactionRepository,new ExchangeRateService(webClientBuilder));
+        transferService = new TransferService(accountRepository,transactionRepository,new ExchangeRateService(webClientBuilder), taskExecutor);
     }
 
     @Test
     void testTransferSuccess() {
-        // Arrange
         Account fromAccount = new Account();
         fromAccount.setBalance(new BigDecimal("1000.00"));
         fromAccount.setCurrency("USD");
@@ -59,12 +59,10 @@ public class TransferServiceIntegrationTest {
         toAccount.setCurrency("EUR");
         toAccount = accountRepository.save(toAccount);
 
-        // Act
         BigDecimal amountToTransfer = new BigDecimal("100.00");
         MoneyTransfer moneyTransfer = new MoneyTransfer(fromAccount.getId(), toAccount.getId(), amountToTransfer);
         CompletableFuture<Void> future = transferService.transfer(moneyTransfer);
 
-        // Assert
         future.join(); // Wait for the CompletableFuture to complete
 
         Account actualfromAccount = accountRepository.findById(fromAccount.getId()).orElseThrow();
@@ -73,7 +71,7 @@ public class TransferServiceIntegrationTest {
         BigDecimal exchangeRate = exchangeRateService.getExchangeRate(fromAccount.getCurrency(), toAccount.getCurrency()).doOnError(error -> {
                    throw new CompletionException(error);
         })
-                .block(); // block() to get the result synchronously;
+                .block();
 
         BigDecimal convertedAmount = amountToTransfer.multiply(exchangeRate);
         BigDecimal expectedFromAccountBalance = fromAccount.getBalance().subtract(amountToTransfer);

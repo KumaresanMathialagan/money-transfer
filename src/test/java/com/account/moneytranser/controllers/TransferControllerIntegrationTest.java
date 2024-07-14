@@ -32,9 +32,6 @@ public class TransferControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
     private AccountRepository accountRepository;
 
     @BeforeEach

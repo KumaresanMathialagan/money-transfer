@@ -22,6 +22,6 @@ public class ExchangeRateService {
                 .uri("/{currency}", fromCurrency)
                 .retrieve()
                 .bodyToMono(ExchangeRateResponse.class)
-                .map(response -> response.getRates().get(toCurrency));
+                .map(response -> response.rates().get(toCurrency));
     }
 }
