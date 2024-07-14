@@ -37,6 +37,8 @@ messaging:
     exchange-name: money.transfer.dlq
     queue-name: money.transfer.dlq
 
+rabbitservice.enable: true
+
 RABBITMQ_HOST: "localhost"
 RABBITMQ_PORT: 5672
 RABBITMQ_USERNAME: "guest"

@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 
 @Service
 public class TransferService {
@@ -32,11 +33,16 @@ public class TransferService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final ExchangeRateService exchangeRateService;
+    private final Executor taskExecutor;
 
-    public TransferService(AccountRepository accountRepository, TransactionRepository transactionRepository, ExchangeRateService exchangeRateService) {
+    public TransferService(AccountRepository accountRepository,
+                           TransactionRepository transactionRepository,
+                           ExchangeRateService exchangeRateService,
+                           Executor taskExecutor) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.exchangeRateService = exchangeRateService;
+        this.taskExecutor = taskExecutor;
     }
 
     @Transactional
@@ -46,46 +52,7 @@ public class TransferService {
             try {
                 logger.info("Initiating transfer: fromAccountId={}, toAccountId={}, amount={}", moneyTransfer.fromAccount(), moneyTransfer.toAccount(), moneyTransfer.amount());
 
-                Optional<Account> fromAccountOpt = accountRepository.findById(moneyTransfer.fromAccount());
-                Optional<Account> toAccountOpt = accountRepository.findById(moneyTransfer.toAccount());
-
-                if (fromAccountOpt.isEmpty() || toAccountOpt.isEmpty()) {
-                    throw new MoneyTransferException("Account not found");
-                }
-
-                Account fromAccount = fromAccountOpt.get();
-                Account toAccount = toAccountOpt.get();
-
-                // Retrieve exchange rate asynchronously
-                BigDecimal exchangeRate = exchangeRateService.getExchangeRate(fromAccount.getCurrency(), toAccount.getCurrency())
-                        .doOnError(error -> {
-                            logger.error("Failed to get exchange rate", error);
-                            throw new CompletionException(error);
-                        })
-                        .block(); // block() to get the result synchronously
-
-                BigDecimal convertedAmount = moneyTransfer.amount().multiply(exchangeRate);
-
-                if (fromAccount.getBalance().compareTo(moneyTransfer.amount()) < 0) {
-                    throw new MoneyTransferException("Insufficient balance");
-                }
-
-                fromAccount.setBalance(fromAccount.getBalance().subtract(moneyTransfer.amount()));
-                toAccount.setBalance(toAccount.getBalance().add(convertedAmount));
-
-                accountRepository.save(fromAccount);
-                accountRepository.save(toAccount);
-
-                Transaction transaction = new Transaction();
-                transaction.setFromAccountId(moneyTransfer.fromAccount());
-                transaction.setToAccountId(moneyTransfer.toAccount());
-                transaction.setAmount(moneyTransfer.amount());
-                transaction.setExchangeRate(exchangeRate);
-                transaction.setTimestamp(LocalDateTime.now());
-
-                transactionRepository.save(transaction);
-
-                logger.info("Transfer completed successfully");
+                processTransfer(moneyTransfer);
 
             } catch (OptimisticLockingFailureException e) {
                 logger.error("Transfer failed: {}", e.getMessage());
@@ -98,7 +65,49 @@ public class TransferService {
                 throw new MoneyTransferException("Transfer failed", e); // Handle unexpected exceptions
             }
             return null;
-        });
+        },taskExecutor);
+    }
+
+    private void processTransfer(MoneyTransfer moneyTransfer) {
+        Optional<Account> fromAccountOpt = accountRepository.findById(moneyTransfer.fromAccount());
+        Optional<Account> toAccountOpt = accountRepository.findById(moneyTransfer.toAccount());
+
+        if (fromAccountOpt.isEmpty() || toAccountOpt.isEmpty()) {
+            throw new MoneyTransferException("Account not found");
+        }
+
+        Account fromAccount = fromAccountOpt.get();
+        Account toAccount = toAccountOpt.get();
+
+        BigDecimal exchangeRate = exchangeRateService.getExchangeRate(fromAccount.getCurrency(), toAccount.getCurrency())
+                .doOnError(error -> {
+                    logger.error("Failed to get exchange rate", error);
+                    throw new CompletionException(error);
+                })
+                .block(); // block() to get the result synchronously
+
+        BigDecimal convertedAmount = moneyTransfer.amount().multiply(exchangeRate);
+
+        if (fromAccount.getBalance().compareTo(moneyTransfer.amount()) < 0) {
+            throw new MoneyTransferException("Insufficient balance");
+        }
+
+        fromAccount.setBalance(fromAccount.getBalance().subtract(moneyTransfer.amount()));
+        toAccount.setBalance(toAccount.getBalance().add(convertedAmount));
+
+        accountRepository.save(fromAccount);
+        accountRepository.save(toAccount);
+
+        Transaction transaction = new Transaction();
+        transaction.setFromAccountId(moneyTransfer.fromAccount());
+        transaction.setToAccountId(moneyTransfer.toAccount());
+        transaction.setAmount(moneyTransfer.amount());
+        transaction.setExchangeRate(exchangeRate);
+        transaction.setTimestamp(LocalDateTime.now());
+
+        transactionRepository.save(transaction);
+
+        logger.info("Transfer completed successfully");
     }
 
 }

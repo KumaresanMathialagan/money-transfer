@@ -8,23 +8,26 @@ import com.account.moneytranser.repositories.AccountRepository;
 import com.account.moneytranser.repositories.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class TransferServiceTest {
 
     @Mock
@@ -36,6 +39,10 @@ public class TransferServiceTest {
     @Mock
     private ExchangeRateService exchangeRateService;
 
+    @Mock
+    private Executor customThreadPoolExecutor;
+
+
     @InjectMocks
     private TransferService transferService;
 
@@ -43,12 +50,12 @@ public class TransferServiceTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        customThreadPoolExecutor = Executors.newFixedThreadPool(10);
+        transferService = new TransferService(accountRepository, transactionRepository, exchangeRateService, customThreadPoolExecutor);
     }
 
     @Test
     void testTransferSuccess() {
-        // Arrange
         Account fromAccount = Account.builder()
                 .balance(new BigDecimal("1000.00"))
                 .currency("USD")
@@ -69,8 +76,7 @@ public class TransferServiceTest {
 
         CompletableFuture<Void> future = transferService.transfer(moneyTransfer);
 
-        // Assert
-        future.join(); // Wait for the CompletableFuture to complete
+        future.join();
 
         verify(accountRepository, times(1)).findById(1L);
         verify(accountRepository, times(1)).findById(2L);
@@ -81,7 +87,6 @@ public class TransferServiceTest {
 
     @Test
     void testTransferInsufficientBalance() {
-        // Arrange
         Account fromAccount = Account.builder()
                 .balance(new BigDecimal("100.00"))
                 .currency("USD")
@@ -108,7 +113,7 @@ public class TransferServiceTest {
 
     @Test
     void testTransferOptimisticLockingFailure() {
-        // Arrange
+
         Account fromAccount = Account.builder()
                 .balance(new BigDecimal("1000.00"))
                 .currency("USD")

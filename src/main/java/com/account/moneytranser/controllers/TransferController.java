@@ -3,7 +3,6 @@ package com.account.moneytranser.controllers;
 import com.account.moneytranser.entity.Account;
 import com.account.moneytranser.feature.MyFeatures;
 import com.account.moneytranser.models.MoneyTransfer;
-import com.account.moneytranser.repositories.AccountRepository;
 import com.account.moneytranser.service.AccountService;
 import com.account.moneytranser.service.TransferService;
 import com.account.moneytranser.service.messaging.RabbitMQSenderService;
@@ -50,7 +49,6 @@ public class TransferController {
             case ASYNC_EXECUTOR -> transferService.transfer(moneyTransfer);
             case RABBIT_MQ -> rabbitMQSenderService.sendToMoneyTransferQueue(moneyTransfer);
         }
-        // Return immediately with "Transfer initiated" message
         return ResponseEntity.ok("Transfer initiated. Processing in background.");
     }
 
@@ -58,7 +56,7 @@ public class TransferController {
     public ResponseEntity<List<Account>> getAllAccounts(@RequestParam Long fromAccountId,
                                                         @RequestParam Long toAccountId) {
 
-        List<Account> accounts = accountService.getAccountDetails(List.of(fromAccountId,toAccountId));
+        List<Account> accounts = accountService.getAccountDetails(List.of(fromAccountId, toAccountId));
         return ResponseEntity.ok(accounts);
     }
 
