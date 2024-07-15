@@ -1,6 +1,6 @@
 # money-transfer
 
-Transfer Controller process the api requests by two features. It will handle multiple requests at same time from multiple users
+Transfer Controller process the api requests by two features. It will handle multiple requests from multiple users
 1. using **Async task executor** - @EnabledByDefault in MyFeatures.class
 2. using **Rabbit MQ**
 
