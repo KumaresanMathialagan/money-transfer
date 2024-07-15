@@ -56,10 +56,10 @@ public class TransferService {
 
             } catch (OptimisticLockingFailureException e) {
                 logger.error("Transfer failed: {}", e.getMessage());
-                throw e; // Optionally rethrow or handle the exception as needed
+                throw e;
             } catch (MoneyTransferException e) {
                 logger.error("Transfer failed: {}", e.getMessage());
-                throw e; // No retry for business logic exceptions
+                throw e;
             }catch (Exception e) {
                 logger.error("Transfer failed", e);
                 throw new MoneyTransferException("Transfer failed", e); // Handle unexpected exceptions

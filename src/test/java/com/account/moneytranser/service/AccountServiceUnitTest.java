@@ -1,6 +1,7 @@
 package com.account.moneytranser.service;
 
 import com.account.moneytranser.entity.Account;
+import com.account.moneytranser.exception.MoneyTransferException;
 import com.account.moneytranser.repositories.AccountRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,7 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +50,7 @@ public class AccountServiceUnitTest {
 
         when(accountRepository.findById(accountId)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> {
+        assertThrows(MoneyTransferException.class, () -> {
             accountService.getAccountDetails(List.of(accountId));
         });
 
