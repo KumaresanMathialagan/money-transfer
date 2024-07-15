@@ -10,10 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.togglz.core.manager.FeatureManager;
 
 import java.math.BigDecimal;
@@ -52,22 +49,22 @@ public class TransferController {
         return ResponseEntity.ok("Transfer initiated. Processing in background.");
     }
 
-    @GetMapping("/accounts")
-    public ResponseEntity<List<Account>> getAllAccounts(@RequestParam Long fromAccountId,
+    @GetMapping("/accounts/status")
+    public ResponseEntity<List<Account>> getAccountStatus(@RequestParam Long fromAccountId,
                                                         @RequestParam Long toAccountId) {
 
         List<Account> accounts = accountService.getAccountDetails(List.of(fromAccountId, toAccountId));
         return ResponseEntity.ok(accounts);
     }
 
-    @PostMapping("/account/create")
-    public ResponseEntity<Account> createAccount(
-            @RequestParam BigDecimal balance,
-            @RequestParam String currency) {
+    @PostMapping("/accounts/create")
+    public ResponseEntity<List<Account>> createAccounts(@RequestBody List<Account> accounts) {
 
-        Account account = Account.builder().balance(balance).currency(currency).build();
-        Account savedAccount = accountService.createAccount(account);
-        return ResponseEntity.ok(savedAccount);
+        List<Account> savedAccounts = accounts.stream()
+                .map(accountService::createAccount)
+                .toList();
+
+        return ResponseEntity.ok(savedAccounts);
     }
 
 }

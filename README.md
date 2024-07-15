@@ -15,13 +15,26 @@ RABBITMQ_PASSWORD: password
 
 While starting application without proper connection to RabbitMQ service, application will display connection error but please ignore this and continue to hit the api using postman.
 
-**Steps to use postman to trigger transfer api**
+**Steps to use postman to trigger money transfer api **
 
 POST
-http://localhost:8080/account/money/transfer
-Body: in x-www-form-urlencoded
-add params
-Example:
-fromAccountId : 1
-toAccountId: 2
-amount: 100
+http://localhost:8080/account/money/transfer?fromAccountId=1&toAccountId=2&amount=100
+
+GET 
+http://localhost:8080/accounts/status?fromAccountId=1&toAccountId=2
+
+POST
+http://localhost:8080/accounts/create
+Example Json:
+[
+{
+"username": "Partha",
+"balance": 1000.00,
+"currency": "USD"
+},
+{
+"username": "Balaji",
+"balance": 1500.50,
+"currency": "EUR"
+}
+]

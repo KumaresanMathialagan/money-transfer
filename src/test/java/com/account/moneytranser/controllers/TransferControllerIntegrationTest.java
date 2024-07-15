@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,24 +41,41 @@ public class TransferControllerIntegrationTest {
     }
 
     @Test
-    public void testCreateAccount() throws Exception {
-        BigDecimal balance = new BigDecimal("1000.0");
-        String currency = "USD";
+    public void testCreateAccounts() throws Exception {
+        BigDecimal balance1 = new BigDecimal("1000.0");
+        String currency1 = "USD";
+        String username1 = "Kumaresan";
 
-        mockMvc.perform(post("/account/create")
-                        .param("balance", balance.toString())
-                        .param("currency", currency)
+        BigDecimal balance2 = new BigDecimal("1500.0");
+        String currency2 = "EUR";
+        String username2 = "Balaji";
+
+        List<Account> accounts = List.of(
+                new Account(1L, username1, balance1, currency1),
+                new Account(2L, username2, balance2, currency2)
+        );
+
+        String jsonContent = new ObjectMapper().writeValueAsString(accounts);
+
+        mockMvc.perform(post("/accounts/create")
+                        .content(jsonContent)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.id").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.balance").value(1000.0))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.currency").value(currency));
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").exists())
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].username").value(username1))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].balance").value(1000.0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].currency").value(currency1))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[1].id").exists())
+                .andExpect(MockMvcResultMatchers.jsonPath("$[1].username").value(username2))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[1].balance").value(1500.0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[1].currency").value(currency2));
     }
 
     @Test
     public void testTransferMoney() throws Exception {
-        Account fromAccount = Account.builder().balance(new BigDecimal("1000.00")).currency("USD").build();
-        Account toAccount = Account.builder().balance(new BigDecimal("500.00")).currency("EUR").build();
+
+        Account fromAccount = Account.builder().username("Kumaresan").balance(new BigDecimal("1000.00")).currency("USD").build();
+        Account toAccount = Account.builder().username("Karthick").balance(new BigDecimal("500.00")).currency("EUR").build();
         accountRepository.save(fromAccount);
         accountRepository.save(toAccount);
 
@@ -72,12 +90,14 @@ public class TransferControllerIntegrationTest {
 
     @Test
     public void testGetAllAccounts() throws Exception {
-        Account account1 = Account.builder().balance(new BigDecimal("1000.0")).currency("USD").build();
-        Account account2 = Account.builder().balance(new BigDecimal("500.0")).currency("EUR").build();
+        String username1 = "Kumaresan";
+        String username2 = "Karthick";
+        Account account1 = Account.builder().username(username1).balance(new BigDecimal("1000.0")).currency("USD").build();
+        Account account2 = Account.builder().username(username2).balance(new BigDecimal("500.0")).currency("EUR").build();
         account1 = accountRepository.save(account1);
         account2 = accountRepository.save(account2);
 
-        mockMvc.perform(get("/accounts")
+        mockMvc.perform(get("/accounts/status")
                         .param("fromAccountId", account1.getId().toString())
                         .param("toAccountId", account2.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON))
