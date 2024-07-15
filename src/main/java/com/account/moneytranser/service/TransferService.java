@@ -54,10 +54,15 @@ public class TransferService {
 
                 processTransfer(moneyTransfer);
 
-            } catch (OptimisticLockingFailureException | MoneyTransferException e) {
+            } catch (OptimisticLockingFailureException e) {
                 logger.error("Transfer failed: {}", e.getMessage());
-            } catch (Exception e) {
+                throw e;
+            } catch (MoneyTransferException e) {
+                logger.error("Transfer failed: {}", e.getMessage());
+                throw e;
+            }catch (Exception e) {
                 logger.error("Transfer failed", e);
+                throw new MoneyTransferException("Transfer failed", e); // Handle unexpected exceptions
             }
             return null;
         },taskExecutor);
